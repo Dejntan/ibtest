@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newExercise, newObject, copyStep, type Step } from '../domain/model';
-import { frameAt, stepTime, totalDuration } from './timeline';
+import { curvePoint } from '../domain/geometry';
+import { frameAt, stepTime, totalDuration, trailStyle, trailsFor } from './timeline';
 
 function steps(): Step[] {
   const first = newExercise().steps[0];
@@ -40,6 +41,30 @@ describe('timeline', () => {
     const source = steps();
     expect(frameAt(source, 1, true).objects).toEqual(source[0].objects);
     expect(frameAt(source, 2, true).objects).toEqual(source[1].objects);
+  });
+  it('follows the bent movement path during playback', () => {
+    const source = steps();
+    source[0].objects[0].moveBend = 0.5;
+    const middle = frameAt(source, 1).objects[0];
+    const expected = curvePoint({ x: 100, y: 100 }, { x: 300, y: 200 }, 0.5, 0.5);
+    expect(middle.x).toBeCloseTo(expected.x);
+    expect(middle.y).toBeCloseTo(expected.y);
+    expect(frameAt(source, 2).objects[0]).toMatchObject({ x: 300, y: 200 });
+  });
+  it('draws a dribble for the ball carrier and hides the carried ball and static objects', () => {
+    const trails = trailsFor(steps(), 0);
+    expect(trails.map((trail) => trail.style)).toEqual(['dribble', 'none']);
+    expect(trailsFor(steps(), 2)).toEqual([]);
+  });
+  it('detects passes, shots and runs, and respects a manual line type', () => {
+    const source = steps();
+    const [player, ball] = source[0].objects;
+    source[1].objects[1] = { ...source[1].objects[1], x: 700, y: 400 };
+    expect(trailStyle(ball, source[0], source[1])).toBe('pass');
+    expect(trailStyle(player, source[0], source[1])).toBe('run');
+    source[1].objects[1] = { ...source[1].objects[1], x: 915, y: 255 };
+    expect(trailStyle(ball, source[0], source[1])).toBe('shot');
+    expect(trailStyle({ ...player, moveStyle: 'pass' }, source[0], source[1])).toBe('pass');
   });
   it('adds and removes unmatched objects only at step boundaries', () => {
     const source = steps();

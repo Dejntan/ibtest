@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { RefreshCw, WifiOff } from 'lucide-react';
 
@@ -5,6 +6,11 @@ export function Updates({ busy, onError }: { busy: boolean; onError: (message: s
   const { offlineReady: [offlineReady, setOfflineReady], needRefresh: [refresh, setRefresh], updateServiceWorker } = useRegisterSW({
     onRegisterError: () => onError('Offlinefunktionen kunde inte aktiveras. Anslut till internet och ladda om när ditt arbete är sparat.'),
   });
+  useEffect(() => {
+    if (!offlineReady || refresh) return;
+    const timer = window.setTimeout(() => setOfflineReady(false), 5000);
+    return () => window.clearTimeout(timer);
+  }, [offlineReady, refresh, setOfflineReady]);
   if (!offlineReady && !refresh) return null;
   return <div className="update-banner" role="status">
     {refresh ? <RefreshCw size={17} /> : <WifiOff size={17} />}

@@ -1,19 +1,39 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { checkFileSize, decodeBundle, encodeBundle, MAX_FILE_BYTES, shareFile } from './files';
 import { exampleExercise } from '../domain/example';
-import { newExercise, newObject } from '../domain/model';
+import { newExercise, newObject, newSession, uid } from '../domain/model';
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('portable exercise files', () => {
   it('round-trips an exercise and the entire library without losing steps or IDs', () => {
     const library = [exampleExercise(), newExercise()];
-    expect(decodeBundle(encodeBundle(library))).toEqual(library);
+    expect(decodeBundle(encodeBundle(library))).toEqual({ exercises: library, sessions: [] });
+  });
+  it('round-trips training sessions together with their exercises', () => {
+    const exercise = exampleExercise();
+    const session = { ...newSession(), name: 'Tisdag', date: '2026-03-10', items: [{ id: uid(), exerciseId: exercise.id, minutes: 15, note: 'Två grupper' }] };
+    const text = encodeBundle([exercise], [session]);
+    expect(JSON.parse(text).version).toBe(2);
+    expect(decodeBundle(text)).toEqual({ exercises: [exercise], sessions: [session] });
+  });
+  it('still imports version 1 files from earlier app versions and fills in new fields', () => {
+    const newFields = ['showTrails', 'style', 'bend', 'shape', 'moveStyle', 'moveBend'];
+    const exercise: unknown = JSON.parse(JSON.stringify(exampleExercise()), (key, value: unknown) => newFields.includes(key) ? undefined : value);
+    const imported = decodeBundle(JSON.stringify({ format: 'planverket', version: 1, exercises: [exercise] }));
+    expect(imported.sessions).toEqual([]);
+    expect(imported.exercises[0].showTrails).toBe(true);
+    expect(imported.exercises[0].steps[0].objects[0]).toMatchObject({ style: 'run', moveStyle: 'auto', moveBend: 0, bend: 0, shape: 'rect' });
+  });
+  it('rejects empty files and sessions with duplicate IDs', () => {
+    expect(() => decodeBundle(JSON.stringify({ format: 'planverket', version: 2, exercises: [], sessions: [] }))).toThrow();
+    const session = newSession();
+    expect(() => encodeBundle([], [session, session])).toThrow();
   });
   it('rejects invalid JSON and unsupported formats/versions explicitly', () => {
     expect(() => decodeBundle('{')).toThrow('inte giltig JSON');
     expect(() => decodeBundle(JSON.stringify({ format: 'other', version: 1, exercises: [] }))).toThrow('ogiltigt innehåll');
-    expect(() => decodeBundle(JSON.stringify({ format: 'planverket', version: 2, exercises: [newExercise()] }))).toThrow('filversion');
+    expect(() => decodeBundle(JSON.stringify({ format: 'planverket', version: 99, exercises: [newExercise()] }))).toThrow('filversion');
   });
   it.each([
     ['empty steps', (e: ReturnType<typeof newExercise>) => { e.steps = []; }],

@@ -66,21 +66,37 @@ Hosting/domän och faktisk publicering ingår inte i projektets lokala bygge.
 ## Rita och animera
 
 1. Skapa en övning, ange namn och beskrivning och välj hel- eller halvplan.
-2. Välj spelare, boll, kon, mål, pil eller text. Tryck på planen för att
-   placera objektet. Verktyget återgår därefter till Välj/flytta.
-3. Dra för att flytta. Markera en pil för att dra dess ändpunkter.
-   Egenskapsfältet har även objektlista och numeriska koordinater.
+   **Ny från mall** startar från en färdig övning (t.ex. 2 mot 1,
+   passningsfyrkant, skott efter passning och uppspel från back).
+2. Välj spelare, målvakt, boll, kon, mål, zon, pil eller text. Tryck på
+   planen för att placera objektet. Verktyget återgår därefter till
+   Välj/flytta. **Konmallar** (rad, triangel, fyrkant, slalom) placerar
+   flera koner på en gång.
+3. Dra för att flytta. Markera en pil för att dra dess ändpunkter och det
+   runda mitthandtaget för att böja den. Zoner (rektangel eller ellips)
+   ändras i storlek med hörnhandtag. Egenskapsfältet har även
+   objektlista, numeriska koordinater, färger och linjetyp
+   (löpning, dribbling, passning, skott).
    Spelare har nummer 1–99 och grönt eller orange lag.
 4. Välj **Kopiera till nästa steg** och flytta spelare och boll till nästa
    position. Kopian behåller objektens ID:n så att rörelsen kan animeras.
-   För riktningsändringar, skapa mellanliggande steg.
+   Rörelsen visas som ett spår. Dra spårets runda handtag för att böja
+   rörelsen; animationen följer kurvan. Spårets typ väljs automatiskt
+   (boll nära spelare = dribbling, boll mot mål = skott, annars passning,
+   spelare = löpning) men kan ändras under **Rörelse till nästa steg**.
 5. Ange stegbeskrivning och tid till nästa steg (0,5–60 sekunder).
    Sista steget är slutpositionen och har ingen efterföljande övergång.
+   **Visa rörelsespår** styr om spåren syns i uppspelning, bild och
+   utskrift.
 6. Välj **Spela upp** för animation, paus, omstart, hastighet, tidslinje
-   och föregående/nästa steg.
+   och föregående/nästa steg. **Helskärm** i uppspelningen (eller **Visa**
+   på övningskortet i biblioteket) öppnar presentationsläge i
+   helskärm (liggande telefon rekommenderas): mellanslag spelar/pausar,
+   piltangenter byter steg och Esc stänger.
 
-Endast spelare och boll interpoleras. Koner, mål, pilar och text är
-statiska förklaringar i det aktuella steget. **Pilar styr inte rörelsen.**
+Endast spelare, målvakter och boll interpoleras. Koner, mål, zoner, pilar
+och text är statiska förklaringar i det aktuella steget.
+**Pilar styr inte rörelsen.**
 Objekt som tillkommer eller försvinner byts vid steggränsen.
 Med systemets inställning för reducerad rörelse visas stegen utan
 förflyttningsanimation.
@@ -94,6 +110,28 @@ Tangentbord: välj objekt i listan, fokusera planen med Tab och använd
 piltangenterna (5 planenheter, eller 20 med Skift). Delete/Backspace tar
 bort markerat objekt. Positioner och piländpunkter kan också anges i
 egenskapsfälten.
+
+## Träningspass
+
+Under fliken **Träningspass** sätts flera övningar ihop till en träning med
+namn, datum och anteckningar. Varje övning får minuter (1–180) och en egen
+anteckning och kan flyttas upp/ner. Passet visar total tid.
+
+- **Visa pass** öppnar presentationsläget för hela passet med nedräkning
+  per övning. Page Up/Page Down byter övning.
+- **Skriv ut passet** ger ett tidsschema följt av alla övningars steg.
+- **Dela pass** och **Exportera passet** skapar en fil som innehåller
+  passet och de övningar det använder.
+- Tas en övning bort ur biblioteket varnar appen om pass som använder den.
+  Passet behålls och övningen hoppas över vid visning.
+
+## Bild och utskrift
+
+- Bildknappen i redigeraren skapar en PNG av aktuellt steg eller alla steg
+  i en bild med titel och stegbeskrivningar, för att dela i t.ex. en
+  lagchatt.
+- Utskriftsknappen öppnar en utskriftsvy med alla steg. Välj
+  **Spara som PDF** som skrivare för att få en PDF.
 
 ## Lagring, delning och säkerhetskopiering
 
@@ -117,11 +155,13 @@ egenskapsfälten.
   du har säkerhetskopierat det.
 - Inget konto, delningslänkar, videoexport eller samredigering ingår.
 
-Filformatet är ett objekt med `format: "planverket"`, `version: 1` och
-`exercises`. Varje övning har metadata, planvariant och steg med stabila
-objekt-ID:n. Samma format används för en övning och biblioteksbackup.
+Filformatet är ett objekt med `format: "planverket"`, `version: 2`,
+`exercises` och `sessions`. Varje övning har metadata, planvariant och
+steg med stabila objekt-ID:n. Träningspass refererar till övningar via
+ID. Samma format används för en övning, ett pass och biblioteksbackup.
+Filer med `version: 1` (endast övningar) kan fortfarande importeras.
 Säkerhetsgränser: högst 100 steg per övning, 200 objekt per steg,
-500 övningar i en fil och 10 MB per importfil.
+500 övningar och 200 pass i en fil och 10 MB per importfil.
 Samma storleksgräns kontrolleras även vid export så att appen inte skapar
 filer som den själv inte kan importera. Exportera övningar separat om en
 hel biblioteksbackup blir för stor.
@@ -147,11 +187,13 @@ bör även verifieras på en riktig iPhone och Android från en HTTPS-adress.
 
 ## Struktur
 
-- `src/domain`: datamodell, validering, historik och exempelövning.
+- `src/domain`: datamodell, validering, historik, mallar och exempelövning.
 - `src/editor`: pekinteraktion, ritverktyg och stegredigering.
-- `src/playback`: tidslinje och uppspelning.
+- `src/playback`: tidslinje, uppspelning och presentationsläge.
+- `src/sessions`: redigering av träningspass.
+- `src/print`: utskriftsvy för övningar och pass.
 - `src/storage`: lokal IndexedDB-lagring.
-- `src/transfer`: portabla filer och systemdelning.
+- `src/transfer`: portabla filer, PNG-export och systemdelning.
 - `src/components`: gemensam planrendering, installation och uppdateringar.
 
 Appen använder inga externa typsnitt, CDN-resurser eller obligatoriska

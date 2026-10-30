@@ -1,60 +1,30 @@
-import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Expand, Pause, Play, RotateCcw, X } from 'lucide-react';
 import type { Exercise } from '../domain/model';
 import { Board } from '../components/Board';
-import { frameAt, stepTime, totalDuration } from './timeline';
+import { usePlayback } from './usePlayback';
 
-export function Player({ exercise, onClose }: { exercise: Exercise; onClose: () => void }) {
-  const [elapsed, setElapsed] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState(1);
-  const [reduced, setReduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const last = useRef<number | null>(null);
-  const total = totalDuration(exercise.steps);
-  const frame = frameAt(exercise.steps, elapsed, reduced);
-
-  useEffect(() => {
-    const query = matchMedia('(prefers-reduced-motion: reduce)');
-    const change = () => setReduced(query.matches);
-    query.addEventListener('change', change);
-    return () => query.removeEventListener('change', change);
-  }, []);
-
-  useEffect(() => {
-    if (!playing) { last.current = null; return; }
-    let request: number;
-    const tick = (now: number) => {
-      const previous = last.current;
-      if (previous !== null) setElapsed((time) => Math.min(total, time + Math.min(now - previous, 100) / 1000 * speed));
-      last.current = now;
-      request = requestAnimationFrame(tick);
-    };
-    request = requestAnimationFrame(tick);
-    return () => { cancelAnimationFrame(request); last.current = null; };
-  }, [playing, speed, total]);
-
-  useEffect(() => { if (elapsed >= total) setPlaying(false); }, [elapsed, total]);
-  function seek(index: number) {
-    setPlaying(false);
-    setElapsed(stepTime(exercise.steps, index));
-  }
+export function Player({ exercise, onClose, onPresent }: { exercise: Exercise; onClose: () => void; onPresent: () => void }) {
+  const { elapsed, setElapsed, playing, setPlaying, speed, setSpeed, reduced, total, frame, trails, seek, toggle, restart } = usePlayback(exercise.steps);
 
   return (
     <div className="player-panel">
       <div className="section-heading">
-        <div><p className="eyebrow">VISNINGSLÄGE</p><h2>{exercise.name}</h2></div>
-        <button className="button secondary" onClick={onClose}><X size={17} />Till redigering</button>
+        <div><p className="eyebrow">UPPSPELNING</p><h2>{exercise.name}</h2></div>
+        <div className="player-heading-actions">
+          <button className="button secondary" onClick={onPresent}><Expand size={17} />Helskärm</button>
+          <button className="button secondary" onClick={onClose}><X size={17} />Till redigering</button>
+        </div>
       </div>
-      <Board court={exercise.court} objects={frame.objects} />
+      <Board court={exercise.court} objects={frame.objects} trails={exercise.showTrails ? trails : []} />
       <div className="playback-bar">
-        <button className="icon-button" aria-label="Börja om" onClick={() => { setElapsed(0); setPlaying(false); }}><RotateCcw size={20} /></button>
+        <button className="icon-button" aria-label="Börja om" onClick={restart}><RotateCcw size={20} /></button>
         <button className="icon-button" aria-label="Föregående steg" disabled={frame.index === 0} onClick={() => seek(frame.index - 1)}><ChevronLeft /></button>
-        <button className="button primary play-button" disabled={total === 0} onClick={() => { if (elapsed >= total) setElapsed(0); setPlaying(!playing); }}>
+        <button className="button primary play-button" disabled={total === 0} onClick={toggle}>
           {playing ? <Pause size={20} /> : <Play size={20} />} {playing ? 'Pausa' : 'Spela'}
         </button>
         <button className="icon-button" aria-label="Nästa steg" disabled={frame.index === exercise.steps.length - 1} onClick={() => seek(frame.index + 1)}><ChevronRight /></button>
         <label className="speed-label">Hastighet<select aria-label="Hastighet" value={speed} onChange={(event) => setSpeed(Number(event.target.value))}>
-          <option value=".5">0,5×</option><option value="1">1×</option><option value="1.5">1,5×</option><option value="2">2×</option>
+          <option value=".25">0,25×</option><option value=".5">0,5×</option><option value="1">1×</option><option value="1.5">1,5×</option><option value="2">2×</option>
         </select></label>
       </div>
       <label className="timeline-label">Tidslinje · {elapsed.toFixed(1)} / {total.toFixed(1)} s

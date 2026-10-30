@@ -216,3 +216,149 @@ test('narrow screen has no page overflow and help remains accessible', async ({ 
   await page.getByRole('button', { name: 'Så fungerar det', exact: true }).last().click();
   await expect(page.getByRole('dialog')).toContainText('Pilar och text förklarar');
 });
+
+test('templates, goalkeeper, zones, cone templates and bendable movement trails', async ({ page, isMobile }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Ny från mall', exact: true }).click();
+  await page.locator('.template-card').filter({ hasText: '2 mot 1' }).click();
+  await expect(page.getByRole('textbox', { name: 'Övningens namn', exact: true })).toHaveValue('2 mot 1');
+  const surface = page.locator('.canvas-surface');
+  await expect(surface.locator('[data-kind="goalkeeper"]')).toHaveCount(1);
+  await expect(surface.locator('[data-line-style="dribble"]')).toHaveCount(1);
+  const selector = page.getByLabel('Markerat objekt', { exact: true });
+  await selector.selectOption({ label: 'Spelare 2 · grön' });
+  const trail = surface.locator(`[data-trail-id="${await selector.inputValue()}"] path`);
+  await expect(trail).toHaveAttribute('data-line-style', 'run');
+  await page.getByLabel('Rörelsetyp', { exact: true }).selectOption('pass');
+  await expect(trail).toHaveAttribute('data-line-style', 'pass');
+  const curved = await trail.getAttribute('d');
+  await page.getByRole('button', { name: 'Räta ut rörelsen', exact: true }).click();
+  await expect(trail).not.toHaveAttribute('d', curved ?? '');
+  const straight = await trail.getAttribute('d');
+  if (!isMobile) {
+    const handle = surface.locator('[data-bend="move"]');
+    await handle.scrollIntoViewIfNeeded();
+    const box = await handle.boundingBox();
+    if (!box) throw new Error('Handtaget för rörelsen saknas');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 - 60, { steps: 8 });
+    await page.mouse.up();
+    await expect(trail).not.toHaveAttribute('d', straight ?? '');
+    await expect(page.getByRole('button', { name: 'Räta ut rörelsen', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Ångra', exact: true }).click();
+    await expect(trail).toHaveAttribute('d', straight ?? '');
+  }
+  await place(page, 'Målvakt', .12, .2);
+  await expect(surface.locator('[data-kind="goalkeeper"]')).toHaveCount(2);
+  await place(page, 'Zon', .3, .1);
+  await expect(surface.locator('[data-kind="zone"]')).toHaveCount(1);
+  await page.getByLabel('Zonens form', { exact: true }).selectOption('ellipse');
+  await expect(surface.locator('[data-kind="zone"] ellipse')).toHaveCount(1);
+  const cones = await surface.locator('[data-kind="cone"]').count();
+  await place(page, 'Konmall Triangel', .3, .75);
+  await expect(surface.locator('[data-kind="cone"]')).toHaveCount(cones + 3);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('presentation mode, image export and printing of an exercise', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Prova ett exempel', exact: true }).click();
+  await expect(page.locator('.save-state')).toContainText('Sparat på enheten');
+  await page.getByRole('button', { name: 'Spela upp', exact: true }).click();
+  await page.getByRole('button', { name: 'Helskärm', exact: true }).click();
+  const present = page.locator('.present');
+  await expect(present.getByText('Steg 1 av 4.', { exact: true })).toBeVisible();
+  await present.getByRole('button', { name: 'Nästa steg', exact: true }).click();
+  await expect(present.getByText('Steg 2 av 4.', { exact: true })).toBeVisible();
+  await present.locator('.present-board').click();
+  await expect(present.getByRole('button', { name: 'Pausa', exact: true })).toBeVisible();
+  await present.getByRole('button', { name: 'Pausa', exact: true }).click();
+  await present.getByRole('button', { name: 'Stäng visningsläge', exact: true }).click();
+  await expect(present).toHaveCount(0);
+  await page.getByRole('button', { name: 'Till redigering', exact: true }).click();
+
+  await page.getByRole('button', { name: 'Spara bild', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Alla 4 steg i en bild', exact: true }).click();
+  const image = dialog.locator('.image-result img');
+  await expect(image).toBeVisible();
+  await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(1000);
+  const download = page.waitForEvent('download');
+  await dialog.getByRole('button', { name: 'Spara bild', exact: true }).click();
+  expect((await download).suggestedFilename()).toBe('Passa-löp-avsluta-alla-steg.png');
+  await dialog.getByRole('button', { name: 'Stäng dialog', exact: true }).click();
+
+  await page.getByRole('button', { name: 'Skriv ut', exact: true }).click();
+  await expect(page.locator('.print-step')).toHaveCount(4);
+  await page.evaluate(() => { window.print = () => document.body.setAttribute('data-printed', 'yes'); });
+  await page.getByRole('button', { name: 'Skriv ut / spara PDF', exact: true }).click();
+  await expect(page.locator('body')).toHaveAttribute('data-printed', 'yes');
+  await page.getByRole('button', { name: 'Tillbaka', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Övningens namn', exact: true })).toHaveValue('Passa, löp, avsluta');
+});
+
+test('training sessions can be planned, presented, printed, shared and survive deleted exercises', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Prova ett exempel', exact: true }).click();
+  await expect(page.locator('.save-state')).toContainText('Sparat på enheten');
+  await page.getByRole('button', { name: 'Bibliotek', exact: true }).click();
+  await page.getByRole('tab', { name: /Träningspass/ }).click();
+  await page.getByRole('button', { name: /Nytt träningspass/ }).click();
+  await page.getByLabel('Passets namn', { exact: true }).fill('Tisdagsträning');
+  await page.getByLabel('Datum', { exact: true }).fill('2026-03-10');
+  for (let index = 0; index < 2; index++) {
+    await page.getByLabel('Lägg till övning', { exact: true }).selectOption({ label: 'Passa, löp, avsluta' });
+    await page.getByRole('button', { name: 'Lägg till', exact: true }).click();
+  }
+  await page.getByLabel('Minuter för Passa, löp, avsluta').first().fill('15');
+  await expect(page.locator('.session-total')).toContainText('25 min');
+  await expect(page.locator('.save-state')).toContainText('Sparat på enheten');
+
+  await page.getByRole('button', { name: 'Visa pass', exact: true }).click();
+  const present = page.locator('.present');
+  await expect(present).toContainText('Tisdagsträning · övning 1 av 2');
+  await expect(present.getByRole('button', { name: 'Starta tid', exact: true })).toContainText('15:00');
+  await present.getByRole('button', { name: 'Starta tid', exact: true }).click();
+  await expect(present.getByRole('button', { name: 'Pausa tid', exact: true })).not.toContainText('15:00', { timeout: 3000 });
+  await present.getByRole('button', { name: 'Nästa övning', exact: true }).click();
+  await expect(present).toContainText('övning 2 av 2');
+  await expect(present.getByRole('button', { name: 'Starta tid', exact: true })).toContainText('10:00');
+  await page.keyboard.press('Escape');
+  await expect(present).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Skriv ut passet', exact: true }).click();
+  await expect(page.locator('.print-schedule tbody tr')).toHaveCount(2);
+  await expect(page.locator('.print-schedule')).toContainText('15–25');
+  await expect(page.locator('.print-exercise')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Tillbaka', exact: true }).click();
+
+  const pending = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Exportera passet', exact: true }).click();
+  const download = await pending;
+  expect(download.suggestedFilename()).toMatch(/^Tisdagsträning.*\.json$/);
+  const path = await download.path();
+  if (!path) throw new Error('Exportfil saknas');
+
+  await page.reload();
+  await page.getByRole('tab', { name: /Träningspass/ }).click();
+  await expect(page.getByRole('button', { name: 'Öppna passet Tisdagsträning', exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: /Övningar/ }).click();
+  let message = '';
+  page.once('dialog', (confirm) => { message = confirm.message(); void confirm.accept(); });
+  await page.getByRole('button', { name: 'Ta bort Passa, löp, avsluta', exact: true }).click();
+  await expect(page.locator('.exercise-card')).toHaveCount(0);
+  expect(message).toContain('Tisdagsträning');
+  await page.getByRole('tab', { name: /Träningspass/ }).click();
+  await page.getByRole('button', { name: 'Öppna passet Tisdagsträning', exact: true }).click();
+  await expect(page.locator('.warning')).toContainText('2 övningar saknas');
+  await page.getByRole('button', { name: 'Bibliotek', exact: true }).click();
+
+  await page.getByLabel('Importera övningsfil', { exact: true }).setInputFiles(path);
+  await expect(page.getByRole('dialog')).toContainText('1 övning och 1 träningspass');
+  await page.getByRole('button', { name: 'Importera som kopior', exact: true }).click();
+  await page.getByRole('button', { name: 'Öppna passet Tisdagsträning (kopia)', exact: true }).click();
+  await expect(page.locator('.session-list li')).toHaveCount(2);
+  await expect(page.locator('.warning')).toHaveCount(0);
+  await expect(page.locator('.session-list')).toContainText('Passa, löp, avsluta (kopia)');
+});
