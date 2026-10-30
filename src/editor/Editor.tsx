@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type 
 import { ArrowLeft, ArrowUpRight, Circle, Copy, Download, Flag, Goal, Image, MousePointer2, Play, Plus, Printer, Redo2, Share2, Shield, Square, Trash2, Triangle, Type, Undo2 } from 'lucide-react';
 import { Board, boardPoint, kindLabels } from '../components/Board';
 import { ImageExport } from '../components/ImageExport';
+import { NumberInput } from '../components/NumberInput';
 import { commit, initialHistory, redo, undo } from '../domain/history';
 import { bendFromPoint } from '../domain/geometry';
 import {
@@ -183,7 +184,6 @@ export function Editor({ initial, saveStatus, onChange, onClose, onExport, onPre
   const undoAction = () => { setHistory(undo); setSelected(null); };
   const redoAction = () => { setHistory(redo); setSelected(null); };
   const autoStyle = object && nextStep ? trailStyle({ ...object, moveStyle: 'auto' }, step, nextStep) : 'none';
-  const number = (value: number, apply: (value: number) => void) => { if (Number.isFinite(value)) apply(value); };
 
   if (playing) return <Player exercise={exercise} onClose={() => setPlaying(false)} onPresent={() => onPresent(exercise)} />;
 
@@ -240,7 +240,7 @@ export function Editor({ initial, saveStatus, onChange, onClose, onExport, onPre
           <div className="inspector-heading"><Flag size={17} /><h3>Steg {stepIndex + 1}</h3><span>{exercise.steps.length} totalt</span></div>
           <label>Vad händer i steget?<textarea value={step.description} maxLength={2000} placeholder="T.ex. spelare 1 passar till spelare 2 och löper mot mål." onChange={(event) => editStep({ description: event.target.value })} /></label>
           <label>Tid till nästa steg
-            <div className="input-suffix"><input aria-label="Steglängd i sekunder" type="number" min=".5" max="60" step=".5" value={step.duration} onChange={(event) => number(event.target.valueAsNumber, (n) => editStep({ duration: clamp(n, .5, 60) }))} /><span>sekunder</span></div>
+            <div className="input-suffix"><NumberInput aria-label="Steglängd i sekunder" min={.5} max={60} value={step.duration} onValue={(duration) => editStep({ duration })} /><span>sekunder</span></div>
           </label>
           <label className="check-label"><input type="checkbox" checked={exercise.showTrails} onChange={(event) => edit({ ...exercise, showTrails: event.target.checked })} />Visa rörelsespår i uppspelning, bild och utskrift</label>
           <p className="hint">Kopiera steget och flytta spelare och boll. Rörelsen mellan stegen blir animationen och visas som spår. Pilar är bara förklaringar.</p>
@@ -253,7 +253,7 @@ export function Editor({ initial, saveStatus, onChange, onClose, onExport, onPre
           </label>
           {object ? <div className="object-properties">
             {(numbered(object.kind) || object.kind === 'zone') && <div className="property-row">
-              {numbered(object.kind) && <label>Nummer<input aria-label="Spelarnummer" type="number" min="1" max="99" value={object.number} onChange={(event) => number(event.target.valueAsNumber, (n) => editObject({ number: clamp(Math.round(n), 1, 99) }))} /></label>}
+              {numbered(object.kind) && <label>Nummer<NumberInput aria-label="Spelarnummer" integer min={1} max={99} value={object.number} onValue={(n) => editObject({ number: n })} /></label>}
               {object.kind === 'zone' && <label>Form<select aria-label="Zonens form" value={object.shape} onChange={(event) => editObject({ shape: event.target.value === 'ellipse' ? 'ellipse' : 'rect' })}><option value="rect">Rektangel</option><option value="ellipse">Ellips</option></select></label>}
               <label>{object.kind === 'zone' ? 'Färg' : 'Lag'}<select aria-label={object.kind === 'zone' ? 'Färg' : 'Lag'} value={object.team} onChange={(event) => editObject({ team: event.target.value as Team })}>
                 {teams.map((team) => <option key={team} value={team}>{teamColors[team].label}</option>)}
@@ -264,12 +264,12 @@ export function Editor({ initial, saveStatus, onChange, onClose, onExport, onPre
             </select></label>}
             {object.kind === 'text' && <label>Text<input aria-label="Text på planen" maxLength={80} value={object.text} onChange={(event) => editObject({ text: event.target.value })} /></label>}
             <div className="property-row">
-              <label>X<input aria-label="Position X" type="number" min="0" max={width} value={Math.round(object.x)} onChange={(event) => number(event.target.valueAsNumber, (x) => editObject(moveObject(object, clamp(x, 0, width) - object.x, 0, width)))} /></label>
-              <label>Y<input aria-label="Position Y" type="number" min="0" max="500" value={Math.round(object.y)} onChange={(event) => number(event.target.valueAsNumber, (y) => editObject(moveObject(object, 0, clamp(y, 0, 500) - object.y, width)))} /></label>
+              <label>X              <NumberInput aria-label="Position X" integer min={0} max={width} value={Math.round(object.x)} onValue={(x) => editObject(moveObject(object, x - object.x, 0, width))} /></label>
+                            <label>Y<NumberInput aria-label="Position Y" integer min={0} max={500} value={Math.round(object.y)} onValue={(y) => editObject(moveObject(object, 0, y - object.y, width))} /></label>
             </div>
             {isTwoPoint(object.kind) && <div className="property-row">
-              <label>Slut X<input aria-label={object.kind === 'arrow' ? 'Pilens slut X' : 'Zonens hörn X'} type="number" min="0" max={width} value={Math.round(object.x2)} onChange={(event) => number(event.target.valueAsNumber, (x) => editObject({ x2: clamp(x, 0, width) }))} /></label>
-              <label>Slut Y<input aria-label={object.kind === 'arrow' ? 'Pilens slut Y' : 'Zonens hörn Y'} type="number" min="0" max="500" value={Math.round(object.y2)} onChange={(event) => number(event.target.valueAsNumber, (y) => editObject({ y2: clamp(y, 0, 500) }))} /></label>
+              <label>Slut X              <NumberInput aria-label={object.kind === 'arrow' ? 'Pilens slut X' : 'Zonens hörn X'} integer min={0} max={width} value={Math.round(object.x2)} onValue={(x2) => editObject({ x2 })} /></label>
+                            <label>Slut Y<NumberInput aria-label={object.kind === 'arrow' ? 'Pilens slut Y' : 'Zonens hörn Y'} integer min={0} max={500} value={Math.round(object.y2)} onValue={(y2) => editObject({ y2 })} /></label>
             </div>}
             {object.kind === 'arrow' && object.bend !== 0 && <button className="button secondary" onClick={() => editObject({ bend: 0 })}>Räta ut pilen</button>}
             {trail && <div className="movement-box">
@@ -290,7 +290,7 @@ export function Editor({ initial, saveStatus, onChange, onClose, onExport, onPre
         </div>
         <div className="steps-strip">
           {exercise.steps.map((item, index) => <button key={item.id} className={`step-card ${index === stepIndex ? 'selected' : ''}`} onClick={() => selectStep(item.id)} aria-label={`Visa steg ${index + 1}`} aria-pressed={index === stepIndex}>
-            <div className="step-card-top"><span>STEG {String(index + 1).padStart(2, '0')}</span><span>{index < exercise.steps.length - 1 ? `${item.duration} s` : 'Slut'}</span></div>
+            <div className="step-card-top"><span>STEG {String(index + 1).padStart(2, '0')}</span><span>{index < exercise.steps.length - 1 ? `${String(item.duration).replace('.', ',')} s` : 'Slut'}</span></div>
             <Board court={exercise.court} objects={item.objects} trails={trailsFor(exercise.steps, index)} />
             <p>{item.description || (index === 0 ? 'Startposition' : 'Nästa position')}</p>
           </button>)}

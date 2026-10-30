@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { AlertTriangle, ArrowDown, ArrowLeft, ArrowUp, Download, Expand, Plus, Printer, Share2, Trash2 } from 'lucide-react';
-import { clamp, sessionMinutes, uid, type Exercise, type SessionItem, type TrainingSession } from '../domain/model';
+import { sessionMinutes, uid, type Exercise, type SessionItem, type TrainingSession } from '../domain/model';
 import { Board } from '../components/Board';
+import { NumberInput } from '../components/NumberInput';
 
 interface Props {
   session: TrainingSession;
@@ -73,7 +74,7 @@ export function SessionEditor({ session, exercises, saveStatus, onChange, onClos
               <div className="session-item-body">
                 <strong>{exercise?.name ?? 'Saknad övning'}</strong>
                 <div className="session-item-fields">
-                  <label className="field compact"><span>Minuter</span><input type="number" min={1} max={180} value={item.minutes} aria-label={`Minuter för ${exercise?.name ?? 'saknad övning'}`} onChange={(event) => updateItem(item.id, { minutes: clamp(Math.round(Number(event.target.value) || 1), 1, 180) })} /></label>
+                  <label className="field compact"><span>Minuter</span><NumberInput integer min={1} max={180} value={item.minutes} aria-label={`Minuter för ${exercise?.name ?? 'saknad övning'}`} onValue={(minutes) => updateItem(item.id, { minutes })} /></label>
                   <label className="field compact grow"><span>Anteckning</span><input value={item.note} maxLength={500} placeholder="T.ex. 3 grupper, byte var 45 s" aria-label={`Anteckning för ${exercise?.name ?? 'saknad övning'}`} onChange={(event) => updateItem(item.id, { note: event.target.value })} /></label>
                 </div>
               </div>

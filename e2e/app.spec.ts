@@ -217,6 +217,27 @@ test('narrow screen has no page overflow and help remains accessible', async ({ 
   await expect(page.getByRole('dialog')).toContainText('Pilar och text förklarar');
 });
 
+test('number fields accept typing that starts with 0 and decimal comma', async ({ page }) => {
+  await create(page);
+  await page.getByRole('button', { name: 'Kopiera till nästa steg', exact: true }).click();
+  await page.getByRole('button', { name: 'Visa steg 1', exact: true }).click();
+  const duration = page.getByLabel('Steglängd i sekunder', { exact: true });
+  await duration.fill('');
+  await duration.pressSequentially('0');
+  await expect(duration).toHaveValue('0');
+  await duration.pressSequentially(',8');
+  await expect(duration).toHaveValue('0,8');
+  await duration.blur();
+  await expect(duration).toHaveValue('0,8');
+  await expect(page.locator('.step-card').first()).toContainText('0,8 s');
+  await duration.fill('0');
+  await duration.blur();
+  await expect(duration).toHaveValue('0,5');
+  await duration.fill('abc');
+  await duration.blur();
+  await expect(duration).toHaveValue('0,5');
+});
+
 test('templates, goalkeeper, zones, cone templates and bendable movement trails', async ({ page, isMobile }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Ny från mall', exact: true }).click();
