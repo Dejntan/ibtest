@@ -94,6 +94,12 @@ input::placeholder, textarea::placeholder { color: #969d90; }
 .exercise-preview { position: relative; width: 100%; padding: 18px 17px; background: #eeece2; border-bottom: 1px solid #e5e5d9; height: 185px; display: flex; justify-content: center; align-items: center; }
 .exercise-preview .board { max-height: 160px; }
 .court-tag { position: absolute; top: 10px; right: 10px; font-size: 9px; font-weight: 600; background: #fcfdf3ed; padding: 5px 8px; border-radius: 4px; color: #60725a; }
+.level-tag { position: absolute; top: 10px; left: 10px; font-size: 9px; font-weight: 700; padding: 5px 8px; border-radius: 4px; color: #fff; letter-spacing: .02em; }
+.level-green { background: #3f8a4a; }
+.level-blue { background: #2f5fae; }
+.library-filter-group { display: flex; gap: 14px; align-items: center; }
+.level-field { display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 11px; font-weight: 600; color: #6c7c66; }
+.level-field select { border: 1px solid #dfe3d4; background: #f6f8ef; border-radius: 6px; padding: 6px 8px; font-size: 12px; color: var(--green); }
 .exercise-card-body { padding: 17px 18px 8px; }
 .exercise-card-meta { display: flex; align-items: center; justify-content: space-between; color: #89917e; font-size: 10px; margin-bottom: 8px; }
 .exercise-name { padding: 0; font-weight: 650; font-size: 16px; text-align: left; overflow-wrap: anywhere; }
@@ -411,8 +417,8 @@ input::placeholder, textarea::placeholder { color: #969d90; }
   h2 { font-size: 23px; }
   .library-actions { width: 100%; }
   .library-actions .button { flex: 1; font-size: 12px; }
-  .library-filters { gap: 10px; }
-  .search-field { flex: 1; width: auto; padding: 0 9px; gap: 7px; }
+  .library-filters { gap: 4px 10px; flex-wrap: wrap; }
+  .search-field { flex: 1 1 100%; width: auto; padding: 0 9px; gap: 7px; }
   .search-field input { font-size: 11px; }
   .filter-field { gap: 5px; }
   .filter-field > svg:first-child { display: none; }
@@ -468,7 +474,7 @@ input::placeholder, textarea::placeholder { color: #969d90; }
   .modal { padding: 21px; }
   .modal-actions { flex-direction: column; }
   .modal h2 { font-size: 21px; }
-  .description-input, .name-input, .search-field input { font-size: 16px; }
+  .description-input, .name-input, .search-field input, .level-field select { font-size: 16px; }
   .name-input { font-size: 27px; }
 }
 @media (prefers-reduced-motion: reduce) {

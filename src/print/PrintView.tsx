@@ -1,6 +1,6 @@
 import { ArrowLeft, Printer } from 'lucide-react';
 import { Board } from '../components/Board';
-import { sessionMinutes, type Exercise, type TrainingSession } from '../domain/model';
+import { levelLabels, sessionMinutes, type Exercise, type TrainingSession } from '../domain/model';
 import { totalDuration, trailsFor } from '../playback/timeline';
 
 export type PrintTarget = { kind: 'exercise'; exercise: Exercise } | { kind: 'session'; session: TrainingSession };
@@ -12,7 +12,7 @@ function ExerciseSheet({ exercise, heading }: { exercise: Exercise; heading?: st
   return <section className="print-exercise">
     {heading && <p className="eyebrow">{heading}</p>}
     <h2>{exercise.name}</h2>
-    <p className="print-meta">{exercise.court === 'full' ? 'Helplan' : 'Halvplan'} · {exercise.steps.length} steg{seconds ? ` · ${seconds.toLocaleString('sv-SE')} s animation` : ''}</p>
+    <p className="print-meta">{exercise.level !== 'none' ? `${levelLabels[exercise.level]} · ` : ''}{exercise.court === 'full' ? 'Helplan' : 'Halvplan'} · {exercise.steps.length} steg{seconds ? ` · ${seconds.toLocaleString('sv-SE')} s animation` : ''}</p>
     {exercise.description && <p className="print-description">{exercise.description}</p>}
     <div className="print-steps">
       {exercise.steps.map((step, index) => <figure key={step.id} className="print-step">

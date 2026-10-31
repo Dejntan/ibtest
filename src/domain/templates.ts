@@ -4,7 +4,7 @@ import { exampleExercise } from './example';
 interface Actor { key: string; kind: ObjectKind; x: number; y: number; team?: Team; number?: number; text?: string }
 interface Frame { description: string; duration?: number; moves: Record<string, [number, number]>; bends?: Record<string, number> }
 
-function build(name: string, description: string, start: string, actors: Actor[], frames: Frame[]): Exercise {
+export function build(name: string, description: string, start: string, actors: Actor[], frames: Frame[]): Exercise {
   const exercise = newExercise();
   exercise.name = name;
   exercise.description = description;

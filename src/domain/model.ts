@@ -39,6 +39,7 @@ export const exerciseSchema = z.object({
   description: z.string().max(4000),
   court: z.enum(['full', 'half']),
   showTrails: z.boolean().default(true),
+  level: z.enum(['none', 'green', 'blue']).default('none'),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   steps: z.array(stepSchema).min(1).max(100),
@@ -108,6 +109,8 @@ export type ObjectKind = BoardObject['kind'];
 export type Team = BoardObject['team'];
 export type LineStyle = BoardObject['style'];
 export type MoveStyle = BoardObject['moveStyle'];
+export type Level = Exercise['level'];
+export const levelLabels: Record<Level, string> = { none: 'Ingen nivå', green: 'Grön nivå', blue: 'Blå nivå' };
 
 export const teamColors: Record<Team, { fill: string; text: string; label: string }> = {
   green: { fill: '#215b4b', text: '#ffffff', label: 'Grön' },
@@ -134,7 +137,7 @@ export const clamp = (value: number, min: number, max: number) => Math.min(max, 
 export function newExercise(): Exercise {
   const now = new Date().toISOString();
   return {
-    id: uid(), name: 'Ny övning', description: '', court: 'full', showTrails: true,
+    id: uid(), name: 'Ny övning', description: '',     court: 'full', showTrails: true, level: 'none',
     createdAt: now, updatedAt: now,
     steps: [{ id: uid(), description: '', duration: 3, objects: [] }],
   };

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { coneTemplate, copyStep, duplicateSession, exerciseSchema, moveObject, nearestObject, newExercise, newObject, newSession, resizeCourt, duplicateExercise, sessionMinutes, sessionSchema } from './model';
 import { bendFromPoint, curvePoint } from './geometry';
 import { exerciseTemplates } from './templates';
+import { starterExercises } from './starter';
+import { trailsFor } from '../playback/timeline';
 import { commit, initialHistory, redo, undo } from './history';
 import { exampleExercise } from './example';
 
@@ -90,6 +92,31 @@ describe('exercise model', () => {
       expect(exercise.steps.length).toBeGreaterThan(1);
       expect(template.build().id).not.toBe(exercise.id);
     }
+  });
+  it('bundles five green and five blue valid starter exercises with stable IDs', () => {
+    const starters = starterExercises();
+    expect(starters).toHaveLength(10);
+    expect(starters.filter((item) => item.level === 'green')).toHaveLength(5);
+    expect(starters.filter((item) => item.level === 'blue')).toHaveLength(5);
+    expect(new Set(starters.map((item) => item.name)).size).toBe(10);
+    expect(starterExercises().map((item) => item.id)).toEqual(starters.map((item) => item.id));
+    for (const starter of starters) {
+      const exercise = exerciseSchema.parse(starter);
+      expect(exercise.steps.length).toBeGreaterThan(2);
+      for (const step of exercise.steps) {
+        expect(step.description).not.toBe('');
+        for (const object of step.objects) {
+          expect(object.x).toBeGreaterThanOrEqual(20); expect(object.x).toBeLessThanOrEqual(980);
+          expect(object.y).toBeGreaterThanOrEqual(20); expect(object.y).toBeLessThanOrEqual(480);
+        }
+      }
+      const styles = exercise.steps.flatMap((_, index) => trailsFor(exercise.steps, index).map((trail) => trail.style));
+      expect(styles.some((style) => style === 'pass' || style === 'shot')).toBe(true);
+    }
+  });
+  it('defaults the level of older exercises to none', () => {
+    const { level: _level, ...legacy } = newExercise();
+    expect(exerciseSchema.parse(legacy).level).toBe('none');
   });
   it('duplicates a session and remaps exercise references', () => {
     const session = { ...newSession(), items: [{ id: 'a', exerciseId: 'old', minutes: 10, note: '' }, { id: 'b', exerciseId: 'other', minutes: 5, note: '' }] };

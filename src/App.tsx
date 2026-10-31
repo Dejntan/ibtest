@@ -5,8 +5,9 @@ import { InstallHelp } from './components/InstallHelp';
 import { Modal } from './components/Modal';
 import { Updates } from './components/Updates';
 import { Editor } from './editor/Editor';
-import { duplicateExercise, duplicateSession, errorMessage, newExercise, newSession, sessionMinutes, type Exercise, type TrainingSession } from './domain/model';
+import { duplicateExercise, duplicateSession, errorMessage, levelLabels, newExercise, newSession, sessionMinutes, type Exercise, type Level, type TrainingSession } from './domain/model';
 import { exampleExercise } from './domain/example';
+import { starterExercises } from './domain/starter';
 import { exerciseTemplates } from './domain/templates';
 import { enterFullscreen, Present, type PresentItem } from './playback/Present';
 import { PrintView, type PrintTarget } from './print/PrintView';
@@ -17,6 +18,17 @@ import { bundleFile, checkFileSize, decodeBundle, downloadFile, shareFile, type 
 const dateFormat = new Intl.DateTimeFormat('sv-SE', { day: 'numeric', month: 'short' });
 const sessionDateFormat = new Intl.DateTimeFormat('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+const STARTER_KEY = 'planverket-starter-v1';
+
+// Adds the bundled level exercises once per device; exercises the user deletes later are not re-added.
+async function seedStarters(database: LibraryStore, saved: Exercise[]): Promise<Exercise[]> {
+  try { if (localStorage.getItem(STARTER_KEY)) return saved; } catch { /* storage blocked: seed missing ones */ }
+  const ids = new Set(saved.map((exercise) => exercise.id));
+  const missing = starterExercises().filter((exercise) => !ids.has(exercise.id));
+  if (missing.length) await database.putMany(missing);
+  try { localStorage.setItem(STARTER_KEY, 'done'); } catch { /* ignore */ }
+  return [...saved, ...missing];
+}
 
 export default function App() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -34,6 +46,7 @@ export default function App() {
   const [status, setStatus] = useState('Sparar…');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'full' | 'half'>('all');
+  const [levelFilter, setLevelFilter] = useState<'all' | Level>('all');
   const [online, setOnline] = useState(navigator.onLine);
   const [pendingImport, setPendingImport] = useState<Library | null>(null);
   const [importBusy, setImportBusy] = useState(false);
@@ -53,7 +66,8 @@ export default function App() {
     async function load() {
       try {
         const database = await openLibrary();
-        const [saved, savedSessions] = await Promise.all([database.all(), database.sessions()]);
+        const [stored, savedSessions] = await Promise.all([database.all(), database.sessions()]);
+        const saved = await seedStarters(database, stored);
         if (!cancelled) { store.current = database; setExercises(saved); setSessions(savedSessions); setStatus('Sparat på enheten'); }
       } catch (problem) {
         if (!cancelled) { setError(errorMessage(problem)); setStatus('Lagring otillgänglig – exportera ditt arbete'); }
@@ -222,7 +236,8 @@ export default function App() {
 
   const filtered = exercises.filter((exercise) =>
     (filter === 'all' || exercise.court === filter)
-    && `${exercise.name} ${exercise.description}`.toLocaleLowerCase('sv-SE').includes(search.toLocaleLowerCase('sv-SE')),
+    && (levelFilter === 'all' || exercise.level === levelFilter)
+    && `${exercise.name} ${exercise.description} ${exercise.level === 'none' ? '' : levelLabels[exercise.level]}`.toLocaleLowerCase('sv-SE').includes(search.toLocaleLowerCase('sv-SE')),
   ).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const sortedSessions = [...sessions].sort((a, b) => (b.date || b.updatedAt).localeCompare(a.date || a.updatedAt));
   const collisions = pendingImport ? pendingImport.exercises.filter((item) => exercises.some((exercise) => exercise.id === item.id)).length
@@ -293,18 +308,22 @@ export default function App() {
               {tab === 'exercises' ? <>
                 <div className="library-filters">
                   <label className="search-field"><Search size={18} /><input type="search" aria-label="Sök övningar" placeholder="Sök bland dina övningar…" value={search} onChange={(event) => setSearch(event.target.value)} /></label>
-                  <div className="filter-field"><LayoutGrid size={16} /><select aria-label="Filtrera planstorlek" value={filter} onChange={(event) => setFilter(event.target.value === 'full' ? 'full' : event.target.value === 'half' ? 'half' : 'all')}><option value="all">Alla planer</option><option value="full">Helplan</option><option value="half">Halvplan</option></select><ChevronDown size={15} /></div>
+                  <div className="library-filter-group">
+                    <div className="filter-field"><select aria-label="Filtrera nivå" value={levelFilter} onChange={(event) => setLevelFilter(event.target.value === 'green' || event.target.value === 'blue' || event.target.value === 'none' ? event.target.value : 'all')}><option value="all">Alla nivåer</option><option value="green">Grön nivå</option><option value="blue">Blå nivå</option><option value="none">Utan nivå</option></select><ChevronDown size={15} /></div>
+                    <div className="filter-field"><LayoutGrid size={16} /><select aria-label="Filtrera planstorlek" value={filter} onChange={(event) => setFilter(event.target.value === 'full' ? 'full' : event.target.value === 'half' ? 'half' : 'all')}><option value="all">Alla planer</option><option value="full">Helplan</option><option value="half">Halvplan</option></select><ChevronDown size={15} /></div>
+                  </div>
                 </div>
                 {loading ? <div className="empty-library"><p role="status">Läser ditt bibliotek…</p></div> : !filtered.length ? <div className="empty-library">
                   <span className="empty-library-icon"><FolderOpen size={31} strokeWidth={1.5} /></span>
                   <h3>{exercises.length ? 'Ingen övning matchar sökningen' : 'Plats för dina bästa övningar'}</h3>
-                  <p>{exercises.length ? 'Prova ett annat sökord eller välj en annan planstorlek.' : 'Börja med en tom plan, en mall eller exemplet.\nDina sparade övningar samlas här.'}</p>
+                  <p>{exercises.length ? 'Prova ett annat sökord eller välj en annan nivå eller planstorlek.' : 'Börja med en tom plan, en mall eller exemplet.\nDina sparade övningar samlas här.'}</p>
                   {!exercises.length && <button className="button secondary" onClick={() => create()}><Plus size={17} />Skapa din första övning</button>}
                 </div> : <div className="exercise-grid">
                   {filtered.map((exercise) => <article className="exercise-card" key={exercise.id}>
                     <button className="exercise-preview" aria-label={`Öppna ${exercise.name}`} onClick={() => setActiveId(exercise.id)}>
                       <Board court={exercise.court} objects={exercise.steps[0].objects} />
                       <span className="court-tag">{exercise.court === 'full' ? 'Helplan' : 'Halvplan'}</span>
+                      {exercise.level !== 'none' && <span className={`level-tag level-${exercise.level}`}>{levelLabels[exercise.level]}</span>}
                     </button>
                     <div className="exercise-card-body"><div className="exercise-card-meta"><span>{exercise.steps.length} steg</span><span>{dateFormat.format(new Date(exercise.updatedAt))}</span></div>
                       <button className="exercise-name" onClick={() => setActiveId(exercise.id)}>{exercise.name}</button>

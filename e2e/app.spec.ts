@@ -1,5 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
+test.beforeEach(async ({ page }, info) => {
+  if (!info.title.includes('förinstallerade')) await page.addInitScript(() => localStorage.setItem('planverket-starter-v1', 'done'));
+});
+
 test.afterEach(async ({ page }) => {
   expect(await page.pageErrors()).toEqual([]);
 });
@@ -215,6 +219,37 @@ test('narrow screen has no page overflow and help remains accessible', async ({ 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'Så fungerar det', exact: true }).last().click();
   await expect(page.getByRole('dialog')).toContainText('Pilar och text förklarar');
+});
+
+test('förinstallerade övningar för grön och blå nivå finns i biblioteket och kommer inte tillbaka när de tagits bort', async ({ page }) => {
+  await page.goto('/');
+  const cards = page.locator('.exercise-card');
+  await expect(cards).toHaveCount(10);
+  await expect(page.locator('.level-tag.level-green')).toHaveCount(5);
+  await expect(page.locator('.level-tag.level-blue')).toHaveCount(5);
+  await page.getByLabel('Filtrera nivå', { exact: true }).selectOption('blue');
+  await expect(cards).toHaveCount(5);
+  await expect(cards.filter({ hasText: 'Kontring 3 mot 2' })).toHaveCount(1);
+  await page.getByLabel('Filtrera nivå', { exact: true }).selectOption('green');
+  await expect(cards).toHaveCount(5);
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.getByRole('button', { name: 'Ta bort Passningar i par', exact: true }).click();
+  await expect(cards).toHaveCount(4);
+  await page.reload();
+  await expect(cards).toHaveCount(9);
+  await expect(page.getByText('Passningar i par')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Öppna Dribbling mellan koner', exact: true }).click();
+  const level = page.getByLabel('Nivå', { exact: true });
+  await expect(level).toHaveValue('green');
+  await level.selectOption('blue');
+  await expect(page.getByRole('status').filter({ hasText: 'Sparat på enheten' })).toBeVisible();
+  await page.getByRole('button', { name: 'Spela upp', exact: true }).click();
+  await page.getByRole('button', { name: 'Spela', exact: true }).click();
+  await expect(page.getByText(/Steg [2-6] av 6/)).toBeVisible();
+  await page.goto('/');
+  await page.getByLabel('Filtrera nivå', { exact: true }).selectOption('blue');
+  await expect(cards).toHaveCount(6);
 });
 
 test('number fields accept typing that starts with 0 and decimal comma', async ({ page }) => {

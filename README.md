@@ -111,6 +111,20 @@ piltangenterna (5 planenheter, eller 20 med Skift). Delete/Backspace tar
 bort markerat objekt. Positioner och piländpunkter kan också anges i
 egenskapsfälten.
 
+## Förinstallerade övningar
+
+Första gången appen öppnas på en enhet läggs tio vanliga övningar in i
+biblioteket, märkta efter seriernas nivåindelning för ungdom:
+
+- **Grön nivå (nybörjare):** Passningar i par, Dribbling mellan koner,
+  Driv och skjut, Passa och byt led, 1 mot 1 mot mål.
+- **Blå nivå (lite mer van):** Väggspel och avslut, 2 mot 1,
+  Passningstriangel, Inspel från kant och avslut, Kontring 3 mot 2.
+
+Övningarna är vanliga övningar som kan redigeras, kopieras och tas bort.
+En borttagen övning läggs inte tillbaka. Biblioteket kan filtreras på
+nivå, och nivån för en egen övning väljs under namnet i redigeraren.
+
 ## Träningspass
 
 Under fliken **Träningspass** sätts flera övningar ihop till en träning med

@@ -7,7 +7,7 @@ import { commit, initialHistory, redo, undo } from '../domain/history';
 import { bendFromPoint } from '../domain/geometry';
 import {
   clamp, coneTemplate, coneTemplateLabels, copyStep, courtWidth, isTwoPoint, lineStyleLabels, lineStyles, moveObject, moveStyleLabels, nearestObject, newObject,
-  resizeCourt, teamColors, teams, type BoardObject, type ConeTemplate, type Exercise, type LineStyle, type MoveStyle, type ObjectKind, type Step, type Team,
+  resizeCourt, teamColors, teams, levelLabels, type BoardObject, type ConeTemplate, type Exercise, type Level, type LineStyle, type MoveStyle, type ObjectKind, type Step, type Team,
 } from '../domain/model';
 import { Player } from '../playback/Player';
 import { trailStyle, trailsFor, type Trail } from '../playback/timeline';
@@ -204,6 +204,9 @@ export function Editor({ initial, saveStatus, onChange, onClose, onExport, onPre
         <p className="eyebrow">DIN TAKTIKTAVLA</p>
         <input className="name-input" aria-label="Övningens namn" maxLength={120} value={exercise.name} onChange={(event) => edit({ ...exercise, name: event.target.value })} onBlur={() => { if (!exercise.name.trim()) edit({ ...exercise, name: 'Namnlös övning' }); }} />
         <input className="description-input" aria-label="Övningens beskrivning" placeholder="Vad vill du att laget ska träna på?" maxLength={4000} value={exercise.description} onChange={(event) => edit({ ...exercise, description: event.target.value })} />
+        <label className="level-field">Nivå<select aria-label="Nivå" value={exercise.level} onChange={(event) => edit({ ...exercise, level: event.target.value === 'green' || event.target.value === 'blue' ? event.target.value : 'none' })}>
+          {(Object.keys(levelLabels) as Level[]).map((level) => <option key={level} value={level}>{levelLabels[level]}</option>)}
+        </select></label>
       </div>
       <div className="workspace">
         <div className="canvas-column">
